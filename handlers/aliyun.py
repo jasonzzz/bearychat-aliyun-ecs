@@ -127,7 +127,7 @@ class AliyunHandler(BaseHandler):
                 self.write('{"text": "Usage: %s %s"}' % (trigger, self.usages[command]))
                 return
 
-            result = yield self.do_stop(params['region'], params['instanceId'])
+            result = yield self.do_start(params['region'], params['instanceId'])
             self.write(result)
 
         if command == 'stop':
@@ -207,11 +207,13 @@ class AliyunHandler(BaseHandler):
         resp = json_decode(client.do_action(describeInstanceAttributeRequest))
         result = {}
         result['text'] = 'show %s %s' % (region_id, instance_id)
-        # TODO: vpc -> EipAddress
-        if resp['InstanceNetworkType'] == 'classic':
-            result['attachments'] = [{"title": "%s (%s)" % (resp['InstanceName'], resp['InstanceId']), "text": "InstanceType: %s\nMemory: %s MB\nCpu: %s\nZoneId: %s\nRegionId: %s\nStatus: %s\nIoOptimized: %s\nInstanceNetworkType: %s\nPublicIpAddress: %s\nCreationTime: %s\nExpiredTime: %s" % (resp['InstanceType'], resp['Memory'], resp['Cpu'], resp['ZoneId'], resp['RegionId'], resp['Status'], resp['IoOptimized'], resp['InstanceNetworkType'], ', '.join(resp['PublicIpAddress']['IpAddress']), resp['CreationTime'], resp['ExpiredTime']), "color": "%s" % self.status_color(resp['Status'])}]
-        elif resp['InstanceNetworkType'] == 'vpc':
-            result['attachments'] = [{"title": "%s (%s)" % (resp['InstanceName'], resp['InstanceId']), "text": "InstanceType: %s\nMemory: %s MB\nCpu: %s\nZoneId: %s\nRegionId: %s\nStatus: %s\nIoOptimized: %s\nInstanceNetworkType: %s\nEipAddress: %s\nCreationTime: %s\nExpiredTime: %s" % (resp['InstanceType'], resp['Memory'], resp['Cpu'], resp['ZoneId'], resp['RegionId'], resp['Status'], resp['IoOptimized'], resp['InstanceNetworkType'], resp['EipAddress']['IpAddress'], resp['CreationTime'], resp['ExpiredTime']), "color": "%s" % self.status_color(resp['Status'])}]
+        if 'Code' in resp.keys() and resp['Code'] == 'InvalidInstanceId.NotFound':
+            result['text'] = 'show %s %s failed, %s' % (region_id, instance_id, resp['Code'])
+        else:
+            if resp['InstanceNetworkType'] == 'classic':
+                result['attachments'] = [{"title": "%s (%s)" % (resp['InstanceName'], resp['InstanceId']), "text": "InstanceType: %s\nMemory: %s MB\nCpu: %s\nZoneId: %s\nRegionId: %s\nStatus: %s\nIoOptimized: %s\nInstanceNetworkType: %s\nPublicIpAddress: %s\nCreationTime: %s\nExpiredTime: %s" % (resp['InstanceType'], resp['Memory'], resp['Cpu'], resp['ZoneId'], resp['RegionId'], resp['Status'], resp['IoOptimized'], resp['InstanceNetworkType'], ', '.join(resp['PublicIpAddress']['IpAddress']), resp['CreationTime'], resp['ExpiredTime']), "color": "%s" % self.status_color(resp['Status'])}]
+            elif resp['InstanceNetworkType'] == 'vpc':
+                result['attachments'] = [{"title": "%s (%s)" % (resp['InstanceName'], resp['InstanceId']), "text": "InstanceType: %s\nMemory: %s MB\nCpu: %s\nZoneId: %s\nRegionId: %s\nStatus: %s\nIoOptimized: %s\nInstanceNetworkType: %s\nEipAddress: %s\nCreationTime: %s\nExpiredTime: %s" % (resp['InstanceType'], resp['Memory'], resp['Cpu'], resp['ZoneId'], resp['RegionId'], resp['Status'], resp['IoOptimized'], resp['InstanceNetworkType'], resp['EipAddress']['IpAddress'], resp['CreationTime'], resp['ExpiredTime']), "color": "%s" % self.status_color(resp['Status'])}]
 
         return result
 
@@ -274,7 +276,7 @@ class AliyunHandler(BaseHandler):
 
         result = {}
         # check if exist
-        if resp['Code'] == 'InvalidInstanceId.NotFound':
+        if 'Code' in resp.keys() and resp['Code'] == 'InvalidInstanceId.NotFound':
             result['text'] = 'start %s %s failed, %s' % (region_id, instance_id, resp['Code'])
         else:
             if resp['Status'] != 'Stopped':
@@ -303,7 +305,7 @@ class AliyunHandler(BaseHandler):
 
         result = {}
         # check if exist
-        if resp['Code'] == 'InvalidInstanceId.NotFound':
+        if 'Code' in resp.keys() and resp['Code'] == 'InvalidInstanceId.NotFound':
             result['text'] = 'stop %s %s failed, %s' % (region_id, instance_id, resp['Code'])
         else:
             if resp['Status'] != 'Running':
@@ -365,7 +367,7 @@ class AliyunHandler(BaseHandler):
 
         result = {}
         # check if exist
-        if resp['Code'] == 'InvalidInstanceId.NotFound':
+        if 'Code' in resp.keys() and resp['Code'] == 'InvalidInstanceId.NotFound':
             result['text'] = 'delete %s %s failed, %s' % (region_id, instance_id, resp['Code'])
         else:
             if resp['Status'] != 'Stopped':
